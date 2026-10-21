@@ -1,0 +1,2 @@
+# try-nixos
+NixOSのセットアップをしてみる
