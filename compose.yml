@@ -3,12 +3,14 @@ services:
     image: nixos/nix:latest
     working_dir: /workspace
     environment:
+      HOME: /root
       NIX_CONFIG: |
         experimental-features = nix-command flakes
         sandbox = false
     volumes:
       - ./:/workspace
       - nix-store:/nix
+      - ./container/gitconfig:/root/.gitconfig:ro
 
 volumes:
   nix-store:
