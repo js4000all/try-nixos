@@ -12,7 +12,8 @@ case "${1:-}" in
     docker compose run --rm \
       -e HOST_UID="$(id -u)" \
       -e HOST_GID="$(id -g)" \
-      nix sh -eu -c '
+      --entrypoint sh \
+      nix -eu -c '
         output=$(nix build \
           --no-link \
           --print-out-paths \
@@ -25,9 +26,21 @@ case "${1:-}" in
       '
     ;;
 
+  exec)
+    shift
+
+    if [ "$#" -eq 0 ]; then
+      exec docker compose run --rm \
+        --entrypoint sh \
+        nix
+    fi
+
+    exec docker compose run --rm \
+      --entrypoint "$1" \
+      nix "${@:2}"
+    ;;
+
   *)
-    docker compose run --rm nix nix "$@"
+    exec docker compose run --rm nix nix "$@"
     ;;
 esac
-
-sudo chown "$(id -u):$(id -g)" flake.lock
