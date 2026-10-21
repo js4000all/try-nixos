@@ -1,0 +1,14 @@
+services:
+  nix:
+    image: nixos/nix:latest
+    working_dir: /workspace
+    environment:
+      NIX_CONFIG: |
+        experimental-features = nix-command flakes
+        sandbox = false
+    volumes:
+      - ./:/workspace
+      - nix-store:/nix
+
+volumes:
+  nix-store:
