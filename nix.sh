@@ -41,6 +41,10 @@ case "${1:-}" in
     ;;
 
   *)
-    exec docker compose run --rm nix nix "$@"
+    docker compose run --rm \
+      -e HOST_UID="$(id -u)" \
+      -e HOST_GID="$(id -g)" \
+      --entrypoint bash \
+      nix /workspace/container/run-nix.sh "$@"
     ;;
 esac
