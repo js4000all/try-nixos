@@ -78,3 +78,28 @@ sudo apt install avahi-daemon avahi-utils libnss-mdns
 ssh root@nixos-bootstrap-2.local
 ```
 
+# Nix ISO build and USB writing
+
+The `/nix` directory is kept in a Docker named volume; only the built ISO is copied to `dist/`.
+
+```sh
+make iso
+make devices
+make flash
+```
+
+`make flash` requires a local interactive terminal, exactly one `dist/*.iso`, `lsblk`, `sudo`, and `dd`. It lists only USB-connected whole disks **at or below 32 GiB** (configurable using `MAX_DEVICE_GIB`), including USB disks with `RM=0` (some USB sticks report this). Select a **number** from the list; no device is auto-selected.
+
+The script checks the selected disk type, USB connection, capacity, mount points, and stacked block devices. If a partition is mounted, unmount it manually and retry. The script does not unmount anything. It requests sudo authorization, then requires the literal final confirmation `WRITE /dev/sdX` with the actual selected path. The entire chosen disk, including its partition table, will be overwritten irreversibly. Double-check the model and size; USB-connected external SSD/HDD may also be shown. The checks cannot fully prevent a device from being swapped between selection and writing.
+
+If the `dist` directory contains zero or more than one `.iso` files, the command exits without writing. Move obsolete ISOs out of `dist` rather than guessing which to use.
+
+The USB-writing script runs on the host (outside the Nix container). The host's ID/GID 1000:1000 is assumed for the container-generated `dist` artifacts.
+
+The capacity limit is checked when listing devices and again before writing. Override it explicitly if needed:
+
+```sh
+MAX_DEVICE_GIB=64 make flash
+```
+
+The limit is in binary GiB (`1 GiB = 1,073,741,824 bytes`), inclusive. It is a safeguard, not proof that a disk is safe to overwrite.

@@ -1,50 +1,30 @@
-
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$ROOT"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+export NIX_WORKDIR="$PWD"
+runtime="${CONTAINER_RUNTIME:-docker}"
 
-case "${1:-}" in
-  iso)
-    mkdir -p dist
+if ! command -v "$runtime" >/dev/null 2>&1; then
+  printf 'error: container runtime not found: %s\n' "$runtime" >&2
+  exit 127
+fi
 
-    docker compose run --rm \
-      -e HOST_UID="$(id -u)" \
-      -e HOST_GID="$(id -g)" \
-      --entrypoint sh \
-      nix -eu -c '
-        output=$(nix build \
-          --no-link \
-          --print-out-paths \
-          ".#nixosConfigurations.bootstrap.config.system.build.isoImage")
+compose=("$runtime" compose -f "$script_dir/compose.yml" run --rm)
 
-        cp "$output"/iso/*.iso /workspace/dist/
+if [[ ! -t 0 || ! -t 1 ]]; then
+  compose+=(-T)
+fi
 
-        chown "$HOST_UID:$HOST_GID" \
-          /workspace/dist/*.iso
-      '
-    ;;
+if [[ "${1:-}" == exec ]]; then
+  shift
+  command="${1:-sh}"
 
-  exec)
+  if (( $# > 0 )); then
     shift
+  fi
+else
+  command="nix"
+fi
 
-    if [ "$#" -eq 0 ]; then
-      exec docker compose run --rm \
-        --entrypoint sh \
-        nix
-    fi
-
-    exec docker compose run --rm \
-      --entrypoint "$1" \
-      nix "${@:2}"
-    ;;
-
-  *)
-    docker compose run --rm \
-      -e HOST_UID="$(id -u)" \
-      -e HOST_GID="$(id -g)" \
-      --entrypoint bash \
-      nix /workspace/container/run-nix.sh "$@"
-    ;;
-esac
+exec "${compose[@]}" --entrypoint "$command" nix "$@"

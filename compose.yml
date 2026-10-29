@@ -1,12 +1,15 @@
 services:
   nix:
-    image: nixos/nix:latest
-    working_dir: /workspace
+    build:
+      context: .
+    stdin_open: true
+    tty: false
     environment:
-      HOME: /root
-      NIX_CONFIG: |
-        experimental-features = nix-command flakes
-        sandbox = false
+      HOME: /home/nix
+      USER: nix
+      NIX_REMOTE: local
+      NIX_CONFIG: ${NIX_CONFIG:-}
+      NIXPKGS_ALLOW_UNFREE: ${NIXPKGS_ALLOW_UNFREE:-0}
     volumes:
       - ./:/workspace
       - nix-store:/nix
